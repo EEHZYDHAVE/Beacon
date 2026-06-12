@@ -1,15 +1,17 @@
-const VERSION = 3;
+const VERSION = 4; // increment from 3 to force update
 const CACHE = `site-cache-v${VERSION}`;
 const ASSETS = [
   './Beacon.html',
   './manifest.json',
-   './icon-192.png',
+  './icon-192.png',
   './icon-512.png',
   'https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;600;700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap'
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', e => {
