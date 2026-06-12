@@ -4,7 +4,7 @@
   "description": "Your LinkedIn brand runs on a system.",
   "start_url": "./Beacon.html",
   "display": "standalone",
-  "orientation": "landsacape"
+  "orientation": "landscape",
   "background_color": "#09101E",
   "theme_color": "#09101E",
   "icons": [
