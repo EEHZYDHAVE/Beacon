@@ -1,10 +1,11 @@
-const VERSION = 1;
+const VERSION = 2;
 const CACHE = `site-cache-v${VERSION}`;
 const ASSETS = [
   './Beacon.html',
-  './icon-192.png',
+  './manifest.json',
+   './icon-192.png',
   './icon-512.png',
-  './manifest.json'
+  'https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;600;700;800;900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap'
 ];
 
 self.addEventListener('install', e => {
