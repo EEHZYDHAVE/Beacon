@@ -1728,10 +1728,11 @@ function DropinRoom({dropin, setDropin, profile, geminiKey, geminiBackupKeys=[],
 
 
 /* ── SETTINGS ── */
-function Settings({settings,setSettings,geminiKey,setGeminiKey,geminiBackupKeys,setGeminiBackupKeys,geminiModel,setGeminiModel,lciProfile,setLciProfile,setLciResearch,setLciIdeation,setLciStudio,setLciLog,setStrategy,setIpTerms,setProofTiers,setProofEntries,setPhase,setD100,setDropin,darkMode,setDarkMode,onExport,onImport,toast}) {
+function Settings({settings,setSettings,geminiKey,setGeminiKey,geminiBackupKeys,setGeminiBackupKeys,geminiModel,setGeminiModel,lciProfile,setLciProfile,setLciResearch,setLciIdeation,setLciStudio,setLciLog,setStrategy,setIpTerms,setProofTiers,setProofEntries,setPhase,setD100,setDropin,darkMode,setDarkMode,onExport,onImport,toast,storagePersisted,requestPersist,lastBackupAt,githubToken,setGithubToken,githubRepo,setGithubRepo,githubPath,setGithubPath,githubBranch,setGithubBranch,githubIncludeKeys,setGithubIncludeKeys,githubBusy,lastPushAt,lastPullAt,onPushGithub,onPullGithub}) {
   const [tab,setTab] = useState('general');
   const [migrateJson,setMigrateJson] = useState('');
   const [showPrimary,setShowPrimary] = useState(false);
+  const [showGithubToken,setShowGithubToken] = useState(false);
   const [newBackup,setNewBackup] = useState('');
   const allKeys = [geminiKey,...geminiBackupKeys].filter(k=>k&&k.trim().length>10);
   const apiOk = geminiKey && geminiKey.trim().length > 10;
@@ -1837,6 +1838,75 @@ function Settings({settings,setSettings,geminiKey,setGeminiKey,geminiBackupKeys,
               <div className="field"><label className="lbl">Paste exported JSON</label><textarea className="inp" rows="6" value={migrateJson} onChange={e=>setMigrateJson(e.target.value)} placeholder="Paste the JSON from your LCI Tool export here..."/></div>
               <button className="btn btn-p" onClick={migrateFromLCI}>Run Migration</button>
               <div style={{marginTop:12,fontSize:11.5,color:'var(--text3)',lineHeight:1.6}}>This maps your profile fields, writing samples, and core settings from LCI v1 into Beacon. Export your data from LCI Tool using its Export button first.</div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-hd"><div className="card-title">Storage &amp; Backup</div><div className="card-sub">Beacon stores data in this browser only — here's how protected it is</div></div>
+            <div className="card-bd">
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:500,color:'var(--text)'}}>Persistent storage</div>
+                  <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>{
+                    storagePersisted===true ? 'Granted — the browser won\'t clear this data to free up space.' :
+                    storagePersisted===false ? 'Not granted — the browser may silently clear this data if the device is low on space or the app goes unused for a while.' :
+                    'Checking…'
+                  }</div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+                  <span className="status-dot" style={{background:storagePersisted===true?'var(--green)':storagePersisted===false?'var(--red)':'var(--border2)'}}/>
+                  {storagePersisted===false && <button className="btn btn-sm btn-p" onClick={requestPersist}>Enable</button>}
+                </div>
+              </div>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 0'}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:500,color:'var(--text)'}}>Last backup</div>
+                  <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>{
+                    lastBackupAt
+                      ? `Exported ${new Date(lastBackupAt).toLocaleDateString()} — export again anytime from below.`
+                      : 'You haven\'t exported a backup yet. Do this now, and again periodically.'
+                  }</div>
+                </div>
+                <span className="status-dot" style={{background: lastBackupAt && (Date.now()-new Date(lastBackupAt).getTime())<14*24*60*60*1000 ? 'var(--green)' : 'var(--amber)'}}/>
+              </div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-hd"><div className="card-title">GitHub Sync</div><div className="card-sub">Push and pull your workspace from a GitHub repo so any device can access it</div></div>
+            <div className="card-bd">
+              <div className="field">
+                <label className="lbl">Personal Access Token</label>
+                <div style={{display:'flex',gap:7}}>
+                  <input className="inp" style={{flex:1,fontFamily:'var(--font-mono)',fontSize:11.5}} type={showGithubToken?'text':'password'} value={githubToken} onChange={e=>setGithubToken(e.target.value)} placeholder="ghp_..."/>
+                  <button className="btn btn-g btn-sm" onClick={()=>setShowGithubToken(s=>!s)}>{showGithubToken?'Hide':'Show'}</button>
+                </div>
+                <div style={{fontSize:10.5,color:'var(--text3)',marginTop:6}}>Needs "repo" scope (or fine-grained Contents: read/write) on the target repo. Stored only in this browser.</div>
+              </div>
+              <div className="field">
+                <label className="lbl">Repository <span style={{fontWeight:400,color:'var(--text3)',fontSize:10}}>owner/repo</span></label>
+                <input className="inp" value={githubRepo} onChange={e=>setGithubRepo(e.target.value)} placeholder="yourname/beacon-data"/>
+              </div>
+              <div style={{display:'flex',gap:10}}>
+                <div className="field" style={{flex:1}}>
+                  <label className="lbl">File path</label>
+                  <input className="inp" value={githubPath} onChange={e=>setGithubPath(e.target.value)} placeholder="beacon-data.json"/>
+                </div>
+                <div className="field" style={{flex:1}}>
+                  <label className="lbl">Branch</label>
+                  <input className="inp" value={githubBranch} onChange={e=>setGithubBranch(e.target.value)} placeholder="main"/>
+                </div>
+              </div>
+              <label style={{display:'flex',alignItems:'center',gap:8,fontSize:11.5,color:'var(--text3)',cursor:'pointer',marginTop:2,marginBottom:14}}>
+                <input type="checkbox" checked={githubIncludeKeys} onChange={e=>setGithubIncludeKeys(e.target.checked)}/>
+                Include Gemini API keys in the synced file <span style={{color:'var(--amber)'}}>(skip this if the repo is public)</span>
+              </label>
+              <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:14}}>
+                <button className="btn btn-p btn-sm" disabled={githubBusy} onClick={onPushGithub}>{githubBusy?'Working…':'Push to GitHub'}</button>
+                <button className="btn btn-g btn-sm" disabled={githubBusy} onClick={onPullGithub}>{githubBusy?'Working…':'Pull from GitHub'}</button>
+              </div>
+              <div style={{fontSize:10.5,color:'var(--text3)',lineHeight:1.7}}>
+                {lastPushAt ? `Last pushed ${new Date(lastPushAt).toLocaleString()}.` : 'Never pushed yet.'}<br/>
+                {lastPullAt ? `Last pulled ${new Date(lastPullAt).toLocaleString()}.` : 'Never pulled yet.'}
+              </div>
             </div>
           </div>
           <div className="card">
@@ -3485,6 +3555,35 @@ function AppShell({onHome}) {
   };
   const save = (key, val) => { try { localStorage.setItem('beacon_'+key, JSON.stringify(val)); } catch {} };
 
+  /* ── storage durability ── */
+  const [storagePersisted,setStoragePersisted] = useState(null); // null=unknown, true/false=known
+  const [storageEstimate,setStorageEstimate] = useState(null);
+  const [lastBackupAt,setLastBackupAt] = useState(()=>load('lastBackupAt', null));
+  const requestPersist = async () => {
+    try {
+      if (navigator.storage && navigator.storage.persist) {
+        const granted = await navigator.storage.persist();
+        setStoragePersisted(granted);
+        pushToast(granted ? 'Persistent storage granted — data is now protected from automatic cleanup' : 'Browser declined persistent storage. Keep exporting backups.', granted?'ok':'err');
+      }
+    } catch { pushToast('Could not request persistent storage','err'); }
+  };
+  useEffect(()=>{
+    // Ask the browser not to auto-evict this app's storage under space pressure,
+    // and report current status so the user isn't blindsided by silent data loss.
+    (async () => {
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          const granted = await navigator.storage.persist();
+          setStoragePersisted(granted);
+        }
+        if (navigator.storage && navigator.storage.estimate) {
+          setStorageEstimate(await navigator.storage.estimate());
+        }
+      } catch {}
+    })();
+  },[]);
+
   /* ── theme ── */
   const [dark,setDark] = useState(()=>{ const v=localStorage.getItem('beacon_dark'); return v===null?true:v==='true'; });
   useEffect(()=>{ document.body.classList.toggle('light',!dark); save('dark',dark); },[dark]);
@@ -3507,6 +3606,16 @@ function AppShell({onHome}) {
   const [geminiBackupKeys,setGeminiBackupKeys] = useState(()=>load('geminiBackupKeys', []));
   const [geminiModel,setGeminiModel] = useState(()=>load('geminiModel', 'gemini-2.5-flash'));
 
+  /* ── GitHub sync ── */
+  const [githubToken,setGithubToken]   = useState(()=>load('githubToken', ''));
+  const [githubRepo,setGithubRepo]     = useState(()=>load('githubRepo', ''));
+  const [githubPath,setGithubPath]     = useState(()=>load('githubPath', 'beacon-data.json'));
+  const [githubBranch,setGithubBranch] = useState(()=>load('githubBranch', 'main'));
+  const [githubIncludeKeys,setGithubIncludeKeys] = useState(()=>load('githubIncludeKeys', false));
+  const [githubBusy,setGithubBusy]     = useState(false);
+  const [lastPushAt,setLastPushAt]     = useState(()=>load('lastPushAt', null));
+  const [lastPullAt,setLastPullAt]     = useState(()=>load('lastPullAt', null));
+
   /* ── LCI data ── */
   const [lciProfile,setLciProfile]   = useState(()=>load('lciProfile',   {...DEFAULT_PROFILE}));
   const [lciResearch,setLciResearch] = useState(()=>load('lciResearch',  {creators:[],posts:[],hypotheses:[],selectedFormats:[],formatsLibrary:FORMAT_LIBRARY_DEFAULTS}));
@@ -3528,12 +3637,20 @@ function AppShell({onHome}) {
   useEffect(()=>save('geminiKey',      geminiKey),      [geminiKey]);
   useEffect(()=>save('geminiBackupKeys', geminiBackupKeys), [geminiBackupKeys]);
   useEffect(()=>save('geminiModel',    geminiModel),    [geminiModel]);
+  useEffect(()=>save('githubToken',    githubToken),    [githubToken]);
+  useEffect(()=>save('githubRepo',     githubRepo),     [githubRepo]);
+  useEffect(()=>save('githubPath',     githubPath),     [githubPath]);
+  useEffect(()=>save('githubBranch',   githubBranch),   [githubBranch]);
+  useEffect(()=>save('githubIncludeKeys', githubIncludeKeys), [githubIncludeKeys]);
+  useEffect(()=>save('lastPushAt',     lastPushAt),     [lastPushAt]);
+  useEffect(()=>save('lastPullAt',     lastPullAt),     [lastPullAt]);
   useEffect(()=>save('lciProfile',     lciProfile),     [lciProfile]);
   useEffect(()=>save('lciResearch',    lciResearch),    [lciResearch]);
   useEffect(()=>save('lciIdeation',    lciIdeation),    [lciIdeation]);
   useEffect(()=>save('lciStudio',      lciStudio),      [lciStudio]);
   useEffect(()=>save('lciLog',         lciLog),         [lciLog]);
   useEffect(()=>save('profile',        profile),        [profile]);
+  useEffect(()=>save('lastBackupAt',   lastBackupAt),   [lastBackupAt]);
 
   const sharedKeyIndexRef = useRef(0);
   const getSharedKey = () => {
@@ -3559,6 +3676,7 @@ function AppShell({onHome}) {
     a.href = URL.createObjectURL(blob);
     a.download = `beacon-export-${new Date().toISOString().slice(0,10)}.json`;
     a.click();
+    setLastBackupAt(new Date().toISOString());
     pushToast('Workspace exported');
   };
 
@@ -3580,6 +3698,80 @@ function AppShell({onHome}) {
     if(data.geminiBackupKeys) setGeminiBackupKeys(data.geminiBackupKeys);
     if(data.dropin)          setDropin(data.dropin);
     pushToast('Workspace imported successfully');
+  };
+
+  /* ── GitHub sync helpers ── */
+  const utf8ToB64 = (str) => {
+    const bytes = new TextEncoder().encode(str);
+    let binary = ''; bytes.forEach(b=>binary+=String.fromCharCode(b));
+    return btoa(binary);
+  };
+  const b64ToUtf8 = (b64) => {
+    const binary = atob(b64.replace(/\n/g,''));
+    const bytes = Uint8Array.from(binary, c=>c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  };
+  const buildSyncPayload = () => {
+    const data = {
+      version:'1.0', exportedAt: new Date().toISOString(),
+      lciProfile, lciResearch, lciIdeation, lciStudio, lciLog,
+      strategy, ipTerms, proofTiers, proofEntries,
+      phase, d100, settings, dropin,
+    };
+    if (githubIncludeKeys) { data.geminiKey = geminiKey; data.geminiBackupKeys = geminiBackupKeys; data.geminiModel = geminiModel; }
+    return data;
+  };
+  const githubApiUrl = (path) => {
+    const [owner,repo] = (githubRepo||'').split('/').map(s=>s.trim());
+    if (!owner || !repo) throw new Error('Repo must be in "owner/repo" format');
+    return `https://api.github.com/repos/${owner}/${repo}/contents/${(path||githubPath||'beacon-data.json').trim().split('/').map(encodeURIComponent).join('/')}`;
+  };
+  const pushToGithub = async () => {
+    if (!githubToken.trim() || !githubRepo.trim()) { pushToast('Add your GitHub token and repo first','err'); return; }
+    setGithubBusy(true);
+    try {
+      const branch = (githubBranch||'main').trim();
+      const url = githubApiUrl();
+      const headers = { 'Authorization': `Bearer ${githubToken.trim()}`, 'Accept': 'application/vnd.github+json' };
+      let sha;
+      const getRes = await fetch(`${url}?ref=${encodeURIComponent(branch)}`, { headers });
+      if (getRes.ok) { sha = (await getRes.json()).sha; }
+      else if (getRes.status !== 404) { const j = await getRes.json().catch(()=>({})); throw new Error(j.message || `GitHub error ${getRes.status}`); }
+
+      const body = {
+        message: `Beacon sync ${new Date().toISOString()}`,
+        content: utf8ToB64(JSON.stringify(buildSyncPayload(), null, 2)),
+        branch,
+      };
+      if (sha) body.sha = sha;
+      const putRes = await fetch(url, { method:'PUT', headers:{...headers,'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!putRes.ok) { const j = await putRes.json().catch(()=>({})); throw new Error(j.message || `GitHub error ${putRes.status}`); }
+      const now = new Date().toISOString();
+      setLastPushAt(now); setLastBackupAt(now);
+      pushToast('Pushed to GitHub');
+    } catch(e) {
+      pushToast(e.message || 'Push failed', 'err');
+    } finally { setGithubBusy(false); }
+  };
+  const pullFromGithub = async () => {
+    if (!githubToken.trim() || !githubRepo.trim()) { pushToast('Add your GitHub token and repo first','err'); return; }
+    if (!window.confirm('This replaces your current data on this device with the version stored on GitHub. Continue?')) return;
+    setGithubBusy(true);
+    try {
+      const branch = (githubBranch||'main').trim();
+      const url = `${githubApiUrl()}?ref=${encodeURIComponent(branch)}`;
+      const headers = { 'Authorization': `Bearer ${githubToken.trim()}`, 'Accept': 'application/vnd.github+json' };
+      const res = await fetch(url, { headers });
+      if (res.status === 404) throw new Error('No synced file found yet — push from another device first.');
+      if (!res.ok) { const j = await res.json().catch(()=>({})); throw new Error(j.message || `GitHub error ${res.status}`); }
+      const j = await res.json();
+      const data = JSON.parse(b64ToUtf8(j.content));
+      handleImport(data);
+      setLastPullAt(new Date().toISOString());
+      pushToast('Pulled latest data from GitHub');
+    } catch(e) {
+      pushToast(e.message || 'Pull failed', 'err');
+    } finally { setGithubBusy(false); }
   };
 
   const handleSendToStudio = (idea) => {
@@ -3676,7 +3868,7 @@ function AppShell({onHome}) {
           {active==='ideation'  && <IdeationRoom ideation={lciIdeation} profile={lciProfile} research={lciResearch} strategy={strategy} ipTerms={ipTerms} proofEntries={proofEntries} onChange={i=>setLciIdeation(i)} onSendToStudio={handleSendToStudio} showToast={(m)=>pushToast(m)} apiKey={geminiKey} backupKeys={geminiBackupKeys} model={geminiModel}/>}
           {active==='studio'    && <PostStudioRoom studio={lciStudio} profile={lciProfile} research={lciResearch} strategy={strategy} onChange={s=>setLciStudio(s)} onSaveToLog={handleSaveToLog} showToast={(m)=>pushToast(m)} apiKey={geminiKey} backupKeys={geminiBackupKeys} model={geminiModel}/>}
           {active==='log'       && <PerformanceLogRoom log={lciLog} studio={lciStudio} research={lciResearch} onChange={l=>setLciLog(l)} showToast={(m)=>pushToast(m)}/>}
-          {active==='settings'  && <Settings settings={settings} setSettings={setSettings} geminiKey={geminiKey} setGeminiKey={setGeminiKey} geminiBackupKeys={geminiBackupKeys} setGeminiBackupKeys={setGeminiBackupKeys} geminiModel={geminiModel} setGeminiModel={setGeminiModel} lciProfile={lciProfile} setLciProfile={setLciProfile} setLciResearch={setLciResearch} setLciIdeation={setLciIdeation} setLciStudio={setLciStudio} setLciLog={setLciLog} setStrategy={setStrategy} setIpTerms={setIpTerms} setProofTiers={setProofTiers} setProofEntries={setProofEntries} setPhase={setPhase} setD100={setD100} setDropin={setDropin} darkMode={dark} setDarkMode={(v)=>{setDark(v);document.body.classList.toggle('light',!v);}} onExport={handleExport} onImport={handleImport} toast={pushToast}/>}
+          {active==='settings'  && <Settings settings={settings} setSettings={setSettings} geminiKey={geminiKey} setGeminiKey={setGeminiKey} geminiBackupKeys={geminiBackupKeys} setGeminiBackupKeys={setGeminiBackupKeys} geminiModel={geminiModel} setGeminiModel={setGeminiModel} lciProfile={lciProfile} setLciProfile={setLciProfile} setLciResearch={setLciResearch} setLciIdeation={setLciIdeation} setLciStudio={setLciStudio} setLciLog={setLciLog} setStrategy={setStrategy} setIpTerms={setIpTerms} setProofTiers={setProofTiers} setProofEntries={setProofEntries} setPhase={setPhase} setD100={setD100} setDropin={setDropin} darkMode={dark} setDarkMode={(v)=>{setDark(v);document.body.classList.toggle('light',!v);}} onExport={handleExport} onImport={handleImport} toast={pushToast} storagePersisted={storagePersisted} requestPersist={requestPersist} lastBackupAt={lastBackupAt} githubToken={githubToken} setGithubToken={setGithubToken} githubRepo={githubRepo} setGithubRepo={setGithubRepo} githubPath={githubPath} setGithubPath={setGithubPath} githubBranch={githubBranch} setGithubBranch={setGithubBranch} githubIncludeKeys={githubIncludeKeys} setGithubIncludeKeys={setGithubIncludeKeys} githubBusy={githubBusy} lastPushAt={lastPushAt} lastPullAt={lastPullAt} onPushGithub={pushToGithub} onPullGithub={pullFromGithub}/>}
           {!['dashboard','strategy','proof','dropin','profile','research','ideation','studio','log','settings'].includes(active) && <PlaceholderRoom room={activeRoom||ROOMS[0]}/>}
         </div>
       </div>
