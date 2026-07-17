@@ -1,4 +1,4 @@
-const VERSION = 4;
+const VERSION = 5;
 const CACHE = `site-cache-v${VERSION}`;
 const ASSETS = [
   './Beacon.html',
