@@ -471,9 +471,9 @@ const {useState,useEffect,useRef,useCallback} = React;
 /* ── CONSTANTS ── */
 const ROOMS = [
   {id:'dashboard',  label:'Dashboard',      dot:'#3D7EFF', desc:'Daily operating plan',            icon:'⚡', section:'Operating'},
-  {id:'strategy',   label:'Brand Strategy', dot:'#8B5CF6', desc:'Your live brand system',            icon:'🧭', section:'Operating', isNew:true},
-  {id:'proof',      label:'Social Proof',   dot:'#00C896', desc:'Testimonials and proof',            icon:'✦',  section:'Operating', isNew:true},
-  {id:'dropin',     label:'Dropin',         dot:'#00D084', desc:'Comment engine',                   icon:'💬', section:'Operating', isNew:true},
+  {id:'strategy',   label:'Brand Strategy', dot:'#8B5CF6', desc:'Your live brand system',            icon:'🧭', section:'Operating'},
+  {id:'proof',      label:'Social Proof',   dot:'#00C896', desc:'Testimonials and proof',            icon:'✦',  section:'Operating'},
+  {id:'dropin',     label:'Dropin',         dot:'#00D084', desc:'Comment engine',                   icon:'💬', section:'Operating'},
   {id:'profile',    label:'Profile',        dot:'#F59E0B', desc:'Brand foundation',                 icon:'◎',  section:'Content'},
   {id:'research',   label:'Research Desk',  dot:'#06B6D4', desc:'Study what works on LinkedIn',     icon:'◈',  section:'Content'},
   {id:'ideation',   label:'Ideation',       dot:'#A78BFA', desc:'Generate ranked post ideas',       icon:'◇',  section:'Content'},
@@ -720,7 +720,7 @@ function Dashboard({phase,setPhase,d100,setD100,toast}) {
       {/* Dream 100 */}
       <div className="card">
         <div className="card-hd">
-          <div><div className="card-title">Dream 100 — Today's Engagement</div><div className="card-sub">3 accounts rotating daily</div></div>
+          <div><div className="card-title">Dream 100 : Today's Engagement</div><div className="card-sub">3 accounts rotating daily</div></div>
           <button className="btn btn-g btn-sm" onClick={()=>setEditD100(!editD100)}>{editD100?'Done':'Manage List'}</button>
         </div>
         <div className="card-bd" style={{paddingTop:4,paddingBottom:4}}>
