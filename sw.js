@@ -1,7 +1,7 @@
 const VERSION = 5;
 const CACHE = `site-cache-v${VERSION}`;
 const ASSETS = [
-  './Beacon.html',
+  './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
