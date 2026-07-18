@@ -31,7 +31,7 @@ self.addEventListener('fetch', e => {
       }
       return resp;
     }).catch(() => {
-      if (e.request.destination === 'document') return caches.match('./index.html');
+      if (e.request.destination === 'document') return caches.match('./');
     }))
   );
 });
