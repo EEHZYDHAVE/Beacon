@@ -2,7 +2,7 @@
   "name": "Beacon",
   "short_name": "Beacon",
   "description": "Your LinkedIn brand runs on a system.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "display": "standalone",
   "orientation": "landscape",
   "background_color": "#09101E",

@@ -1,4 +1,4 @@
-const VERSION = 7;
+const VERSION = 8;
 const CACHE = `site-cache-v${VERSION}`;
 const ASSETS = [
   './index.html',
