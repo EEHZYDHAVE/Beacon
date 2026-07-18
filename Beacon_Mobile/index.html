@@ -471,9 +471,9 @@ const {useState,useEffect,useRef,useCallback} = React;
 /* ── CONSTANTS ── */
 const ROOMS = [
   {id:'dashboard',  label:'Dashboard',      dot:'#3D7EFF', desc:'Daily operating plan',            icon:'⚡', section:'Operating'},
-  {id:'strategy',   label:'Brand Strategy', dot:'#8B5CF6', desc:'Your live brand system',            icon:'🧭', section:'Operating'},
-  {id:'proof',      label:'Social Proof',   dot:'#00C896', desc:'Testimonials and proof',            icon:'✦',  section:'Operating'},
-  {id:'dropin',     label:'Dropin',         dot:'#00D084', desc:'Comment engine',                   icon:'💬', section:'Operating'},
+  {id:'strategy',   label:'Brand Strategy', dot:'#8B5CF6', desc:'Your live brand system',            icon:'🧭', section:'Operating', isNew:true},
+  {id:'proof',      label:'Social Proof',   dot:'#00C896', desc:'Testimonials and proof',            icon:'✦',  section:'Operating', isNew:true},
+  {id:'dropin',     label:'Dropin',         dot:'#00D084', desc:'Comment engine',                   icon:'💬', section:'Operating', isNew:true},
   {id:'profile',    label:'Profile',        dot:'#F59E0B', desc:'Brand foundation',                 icon:'◎',  section:'Content'},
   {id:'research',   label:'Research Desk',  dot:'#06B6D4', desc:'Study what works on LinkedIn',     icon:'◈',  section:'Content'},
   {id:'ideation',   label:'Ideation',       dot:'#A78BFA', desc:'Generate ranked post ideas',       icon:'◇',  section:'Content'},
@@ -720,7 +720,7 @@ function Dashboard({phase,setPhase,d100,setD100,toast}) {
       {/* Dream 100 */}
       <div className="card">
         <div className="card-hd">
-          <div><div className="card-title">Dream 100 : Today's Engagement</div><div className="card-sub">3 accounts rotating daily</div></div>
+          <div><div className="card-title">Dream 100 — Today's Engagement</div><div className="card-sub">3 accounts rotating daily</div></div>
           <button className="btn btn-g btn-sm" onClick={()=>setEditD100(!editD100)}>{editD100?'Done':'Manage List'}</button>
         </div>
         <div className="card-bd" style={{paddingTop:4,paddingBottom:4}}>
@@ -3121,6 +3121,57 @@ ${steerCtx}${fmtCtx}${outputInstr}`;
   );
 }
 
+/* ── CALENDAR VIEW (used by Post Studio's Content Calendar tab) ── */
+function CalendarView({savedPosts, calendar, buckets, onAssign, onRemove, DAYS, SLOTS}) {
+  const postById = (id) => savedPosts.find(p=>p.id===id);
+
+  if (savedPosts.length === 0) {
+    return (
+      <div style={{textAlign:'center',padding:'56px',color:'var(--text3)',fontSize:12.5,background:'var(--surface)',borderRadius:12,border:'1px solid var(--border)'}}>
+        Save a draft first, then come back here to schedule it into your week.
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {DAYS.map(day => (
+        <div key={day} className="card" style={{marginBottom:12}}>
+          <div className="card-header"><div className="card-title">{day}</div></div>
+          <div className="card-body">
+            {SLOTS.map((slot,i) => {
+              const key = `${day}-${slot}`;
+              const postId = calendar[key];
+              const post = postId ? postById(postId) : null;
+              return (
+                <div key={slot} style={{padding: i===0 ? '0 0 12px' : '12px 0', borderTop: i>0 ? '1px solid var(--border)' : 'none'}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:8}}>
+                    <span style={{fontSize:10.5,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.5px'}}>{slot}</span>
+                    {post && <button className="btn btn-ghost btn-sm" style={{padding:'3px 9px',fontSize:10.5}} onClick={()=>onRemove(day,slot)}>Clear</button>}
+                  </div>
+                  {post ? (
+                    <div>
+                      <div style={{display:'flex',gap:6,marginBottom:6,flexWrap:'wrap'}}>{post.bucket && <BucketTag buckets={buckets} name={post.bucket}/>}</div>
+                      <div style={{fontSize:12,color:'var(--text)',lineHeight:1.55,whiteSpace:'pre-wrap',maxHeight:66,overflow:'hidden'}}>{post.content}</div>
+                    </div>
+                  ) : (
+                    <select className="input" value="" onChange={e=>{ if(e.target.value) onAssign(Number(e.target.value), day, slot); }}>
+                      <option value="">+ Assign a saved draft…</option>
+                      {savedPosts.map(p=>(
+                        <option key={p.id} value={p.id}>{(p.content||'').slice(0,40).replace(/\n/g,' ')}{(p.content||'').length>40?'…':''}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function PostStudioRoom({ studio, profile, research, strategy, onChange, onSaveToLog, showToast, apiKey, backupKeys=[], model }) {
   const [tab, setTab] = useState('write');
   const [inputMode, setInputMode] = useState('');
@@ -3972,7 +4023,7 @@ function AppShell({onHome}) {
 
 /* ── ROOT ── */
 function App() {
-  const [screen,setScreen] = useState('home');
+  const [screen,setScreen] = useState('app');
   return screen==='home' ? <HomePage onEnter={()=>setScreen('app')}/> : <AppShell onHome={()=>setScreen('home')}/>;
 }
 
