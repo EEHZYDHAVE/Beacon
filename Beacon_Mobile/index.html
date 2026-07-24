@@ -460,6 +460,32 @@ html,body{overscroll-behavior-y:none}
 .m-sheet-item.act .m-sheet-ic{background:var(--blue-dim)}
 .m-sheet-name{font-size:13.5px;font-weight:600}
 .m-sheet-desc{font-size:11px;color:var(--text3);margin-top:1px}
+/* CONTENT CALENDAR */
+.cal-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.cal-row:last-child{border-bottom:none}
+.cal-slot-lbl{width:74px;flex-shrink:0;font-size:11px;color:var(--text3);font-weight:600}
+.cal-chip{flex:1;display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 10px;position:relative}
+.cal-chip-txt{flex:1;font-size:12px;color:var(--text2);line-height:1.4}
+.cal-add-btn{flex:1;text-align:left;background:none;border:1px dashed var(--border2);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--text3);cursor:pointer;font-family:var(--font-body);min-height:40px}
+.cal-add-btn:active{border-color:var(--blue);color:var(--blue)}
+.cal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:70}
+.cal-sheet{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,92vw);max-height:78vh;
+  background:var(--bg2);border-radius:16px;border:1px solid var(--border);z-index:71;display:flex;flex-direction:column;overflow:hidden}
+.cal-sheet-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)}
+.cal-sheet-title{font-family:var(--font-display);font-size:14.5px;font-weight:800}
+.cal-sheet-list{overflow-y:auto;padding:8px}
+.cal-sheet-item{padding:11px 10px;border-radius:10px;cursor:pointer}
+.cal-sheet-item:active{background:var(--surface)}
+.cal-sheet-name{font-size:12px;font-weight:600;color:var(--text)}
+.cal-sheet-desc{font-size:11px;color:var(--text3);margin-top:2px;line-height:1.5}
+.cal-sheet-search{padding:0 16px 12px}
+.cal-sheet-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:5px}
+.cal-sheet-date{font-size:10.5px;color:var(--text3);margin-top:5px}
+.cal-check-badge{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border2);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:11px;color:transparent;cursor:pointer;transition:all .15s;flex-shrink:0}
+.cal-check-badge.on{background:var(--green);border-color:var(--green);color:#06110B}
+@media (max-width:640px){
+  .cal-sheet{left:0;right:0;bottom:0;top:auto;transform:none;width:100%;max-height:80vh;border-radius:16px 16px 0 0;border-bottom:none}
+}
 </style>
 </head>
 
@@ -471,9 +497,9 @@ const {useState,useEffect,useRef,useCallback} = React;
 /* ── CONSTANTS ── */
 const ROOMS = [
   {id:'dashboard',  label:'Dashboard',      dot:'#3D7EFF', desc:'Daily operating plan',            icon:'⚡', section:'Operating'},
-  {id:'strategy',   label:'Brand Strategy', dot:'#8B5CF6', desc:'Your live brand system',            icon:'🧭', section:'Operating', isNew:true},
-  {id:'proof',      label:'Social Proof',   dot:'#00C896', desc:'Testimonials and proof',            icon:'✦',  section:'Operating', isNew:true},
-  {id:'dropin',     label:'Dropin',         dot:'#00D084', desc:'Comment engine',                   icon:'💬', section:'Operating', isNew:true},
+  {id:'strategy',   label:'Brand Strategy', dot:'#8B5CF6', desc:'Your live brand system',            icon:'🧭', section:'Operating'},
+  {id:'proof',      label:'Social Proof',   dot:'#00C896', desc:'Testimonials and proof',            icon:'✦',  section:'Operating'},
+  {id:'dropin',     label:'Dropin',         dot:'#00D084', desc:'Comment engine',                   icon:'💬', section:'Operating'},
   {id:'profile',    label:'Profile',        dot:'#F59E0B', desc:'Brand foundation',                 icon:'◎',  section:'Content'},
   {id:'research',   label:'Research Desk',  dot:'#06B6D4', desc:'Study what works on LinkedIn',     icon:'◈',  section:'Content'},
   {id:'ideation',   label:'Ideation',       dot:'#A78BFA', desc:'Generate ranked post ideas',       icon:'◇',  section:'Content'},
@@ -592,10 +618,10 @@ function CopyBtn({text}) {
 /* ── HOME PAGE ── */
 function HomePage({onEnter}) {
   const rooms = [
-    {icon:'⚡', name:'Dashboard', desc:'Phase-based posting plan with Dream 100 rotation and daily signal actions.', badge:'new'},
-    {icon:'🧭', name:'Brand Strategy', desc:'Fully editable POV, audience messages, content funnel, and IP Vault.', badge:'new'},
-    {icon:'✦', name:'Social Proof', desc:'Editable proof tiers and AI insight per entry for conversion post drafts.', badge:'new'},
-    {icon:'💬', name:'Dropin', desc:'Full comment engine. Find target posts, generate variations, build presence.', badge:'new'},
+    {icon:'⚡', name:'Dashboard', desc:'Phase-based posting plan with Dream 100 rotation and daily signal actions.'},
+    {icon:'🧭', name:'Brand Strategy', desc:'Fully editable POV, audience messages, content funnel, and IP Vault.'},
+    {icon:'✦', name:'Social Proof', desc:'Editable proof tiers and AI insight per entry for conversion post drafts.'},
+    {icon:'💬', name:'Dropin', desc:'Full comment engine. Find target posts, generate variations, build presence.'},
   ];
   return (
     <div className="home">
@@ -628,7 +654,6 @@ function HomePage({onEnter}) {
             <span className="room-icon">{r.icon}</span>
             <div className="room-name">{r.name}</div>
             <div className="room-desc">{r.desc}</div>
-            <span className={`room-badge ${r.badge==='new'?'rb-new':'rb-old'}`}>{r.badge==='new'?'✦ New':'Existing'}</span>
           </div>
         ))}
       </div>
@@ -3122,7 +3147,9 @@ ${steerCtx}${fmtCtx}${outputInstr}`;
 }
 
 /* ── CALENDAR VIEW (used by Post Studio's Content Calendar tab) ── */
-function CalendarView({savedPosts, calendar, buckets, onAssign, onRemove, DAYS, SLOTS}) {
+function CalendarView({savedPosts, calendar, buckets, onAssign, onRemove, onToggleUsed, DAYS, SLOTS}) {
+  const [picker, setPicker] = useState(null); // {day, slot} or null
+  const [search, setSearch] = useState('');
   const postById = (id) => savedPosts.find(p=>p.id===id);
 
   if (savedPosts.length === 0) {
@@ -3133,34 +3160,42 @@ function CalendarView({savedPosts, calendar, buckets, onAssign, onRemove, DAYS, 
     );
   }
 
+  const filtered = savedPosts.filter(p=>{
+    if(!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (p.content||'').toLowerCase().includes(q) || (p.bucket||'').toLowerCase().includes(q) || (p.formatName||'').toLowerCase().includes(q);
+  });
+
+  const pick = (post) => { if(picker) onAssign(post.id, picker.day, picker.slot); setPicker(null); setSearch(''); };
+  const closePicker = () => { setPicker(null); setSearch(''); };
+
   return (
     <div>
+      <div style={{fontSize:11.5,color:'var(--text3)',marginBottom:14}}>Tap an empty slot to assign a post. Tap a filled slot to remove it.</div>
       {DAYS.map(day => (
         <div key={day} className="card" style={{marginBottom:12}}>
           <div className="card-header"><div className="card-title">{day}</div></div>
           <div className="card-body">
-            {SLOTS.map((slot,i) => {
+            {SLOTS.map(slot => {
               const key = `${day}-${slot}`;
               const postId = calendar[key];
               const post = postId ? postById(postId) : null;
               return (
-                <div key={slot} style={{padding: i===0 ? '0 0 12px' : '12px 0', borderTop: i>0 ? '1px solid var(--border)' : 'none'}}>
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:8}}>
-                    <span style={{fontSize:10.5,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.5px'}}>{slot}</span>
-                    {post && <button className="btn btn-ghost btn-sm" style={{padding:'3px 9px',fontSize:10.5}} onClick={()=>onRemove(day,slot)}>Clear</button>}
-                  </div>
+                <div key={slot} className="cal-row">
+                  <div className="cal-slot-lbl">{slot}</div>
                   {post ? (
-                    <div>
-                      <div style={{display:'flex',gap:6,marginBottom:6,flexWrap:'wrap'}}>{post.bucket && <BucketTag buckets={buckets} name={post.bucket}/>}</div>
-                      <div style={{fontSize:12,color:'var(--text)',lineHeight:1.55,whiteSpace:'pre-wrap',maxHeight:66,overflow:'hidden'}}>{post.content}</div>
+                    <div className="cal-chip" style={{flexDirection:'column',alignItems:'stretch',gap:6,padding:'10px 12px'}} onClick={()=>onRemove(day,slot)}>
+                      <span className={`cal-check-badge${post.used?' on':''}`}
+                        onClick={e=>{ e.stopPropagation(); onToggleUsed(post.id); }}
+                        title={post.used?'Mark as not used':'Mark as used'}>✓</span>
+                      <div style={{display:'flex',gap:5,flexWrap:'wrap',paddingRight:24}}>
+                        {post.bucket && <BucketTag buckets={buckets} name={post.bucket}/>}
+                      </div>
+                      <div className="cal-chip-txt" style={{maxHeight:46,overflow:'hidden'}}>{post.content}</div>
+                      <span style={{fontSize:10,color:'var(--red)',fontWeight:500}}>Tap to remove</span>
                     </div>
                   ) : (
-                    <select className="input" value="" onChange={e=>{ if(e.target.value) onAssign(Number(e.target.value), day, slot); }}>
-                      <option value="">+ Assign a saved draft…</option>
-                      {savedPosts.map(p=>(
-                        <option key={p.id} value={p.id}>{(p.content||'').slice(0,40).replace(/\n/g,' ')}{(p.content||'').length>40?'…':''}</option>
-                      ))}
-                    </select>
+                    <button className="cal-add-btn" onClick={()=>setPicker({day,slot})}>+ Assign post</button>
                   )}
                 </div>
               );
@@ -3168,6 +3203,39 @@ function CalendarView({savedPosts, calendar, buckets, onAssign, onRemove, DAYS, 
           </div>
         </div>
       ))}
+
+      {picker && (
+        <div className="cal-backdrop" onClick={closePicker}>
+          <div className="cal-sheet" onClick={e=>e.stopPropagation()}>
+            <div className="cal-sheet-hd">
+              <div>
+                <div className="cal-sheet-title">Pick a post</div>
+                <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>{picker.day} · {picker.slot}</div>
+              </div>
+              <button className="icon-btn" onClick={closePicker}>✕</button>
+            </div>
+            <div className="cal-sheet-search">
+              <input className="inp" autoFocus placeholder="Search by content, bucket, or funnel stage..." value={search} onChange={e=>setSearch(e.target.value)}/>
+            </div>
+            <div className="cal-sheet-list">
+              {filtered.length===0 ? (
+                <div style={{padding:'30px 10px',textAlign:'center',fontSize:12,color:'var(--text3)'}}>No saved drafts match.</div>
+              ) : filtered.map(p=>(
+                <div key={p.id} className="cal-sheet-item" onClick={()=>pick(p)}>
+                  <div className="cal-sheet-tags">
+                    {p.bucket && <BucketTag buckets={buckets} name={p.bucket}/>}
+                    {p.formatName && <span style={{fontSize:11,background:'var(--bg3)',color:'var(--text3)',padding:'2px 8px',borderRadius:20,border:'1px solid var(--border)'}}>{p.formatName}</span>}
+                    {p.status && <span style={{fontSize:10.5,background:p.status==='manual'?'var(--green-dim)':'var(--blue-dim)',color:p.status==='manual'?'var(--green)':'var(--blue)',padding:'2px 8px',borderRadius:20}}>{p.status}</span>}
+                    {p.used && <span style={{fontSize:10.5,background:'var(--bg3)',color:'var(--text3)',padding:'2px 8px',borderRadius:20}}>✓ used</span>}
+                  </div>
+                  <div className="cal-sheet-name">{(p.content||'').slice(0,90)}{(p.content||'').length>90?'…':''}</div>
+                  <div className="cal-sheet-date">{p.savedAt?new Date(p.savedAt).toLocaleDateString():''}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3287,11 +3355,16 @@ Rules: No em dashes. No hashtags. No "I am excited to share". First person. Matc
 
   const savePost = () => {
     if(!generatedPost.trim()){showToast('Nothing to save yet','!');return;}
-    const post={id:Date.now(),content:finalPost(),bucket:selFunnel,formatName:availableFormats.find(f=>f.id===selFormat)?.name||'Open format',style:selStyle,idea:pending?.hook||'',savedAt:new Date().toISOString(),status:'draft'};
+    const post={id:Date.now(),content:finalPost(),bucket:selFunnel,formatName:availableFormats.find(f=>f.id===selFormat)?.name||'Open format',style:selStyle,idea:pending?.hook||'',savedAt:new Date().toISOString(),status:'draft',used:false};
     const u=[post,...savedPosts]; setSavedPosts(u); sync({savedPosts:u,calendar}); showToast('Post saved to drafts');
   };
 
   const deletePost = (id) => { const u=savedPosts.filter(p=>p.id!==id); setSavedPosts(u); sync({savedPosts:u,calendar}); showToast('Post removed'); };
+
+  const toggleUsed = (id) => {
+    const u = savedPosts.map(p=>p.id===id?{...p,used:!p.used}:p);
+    setSavedPosts(u); sync({savedPosts:u,calendar});
+  };
 
   const assignToSlot = (postId, day, slot) => {
     const key = `${day}-${slot}`;
@@ -3311,7 +3384,7 @@ Rules: No em dashes. No hashtags. No "I am excited to share". First person. Matc
 
   const saveManual = () => {
     if(!manualContent.trim()){showToast('Paste your post content first','!');return;}
-    const post={id:Date.now(),content:manualContent.trim(),bucket:manualBucket,formatName:'My own',style:'',idea:'',savedAt:new Date().toISOString(),status:'manual'};
+    const post={id:Date.now(),content:manualContent.trim(),bucket:manualBucket,formatName:'My own',style:'',idea:'',savedAt:new Date().toISOString(),status:'manual',used:false};
     const u=[post,...savedPosts]; setSavedPosts(u); sync({savedPosts:u,calendar});
     setManualContent(''); setManualBucket(''); setShowManual(false); showToast('Post saved to drafts');
   };
@@ -3477,17 +3550,19 @@ Rules: No em dashes. No hashtags. No "I am excited to share". First person. Matc
         <div>
           {savedPosts.length===0?<div style={{textAlign:'center',padding:'56px',color:'var(--text3)',fontSize:12.5,background:'var(--surface)',borderRadius:12,border:'1px solid var(--border)'}}>No saved drafts yet. Generate a post and save it or save a post you wrote manually.</div>:
           savedPosts.map(p=>(
-            <div key={p.id} className="saved-post-card">
+            <div key={p.id} className="saved-post-card" style={p.used?{borderColor:'var(--green-mid)'}:{}}>
               <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10,marginBottom:10,flexWrap:'wrap'}}>
                 <div style={{display:'flex',gap:7,flexWrap:'wrap',alignItems:'center'}}>
                   {p.bucket&&<BucketTag buckets={buckets} name={p.bucket}/>}
                   {p.formatName&&<span style={{fontSize:11,background:'var(--bg3)',color:'var(--text3)',padding:'2px 8px',borderRadius:20,border:'1px solid var(--border)'}}>{p.formatName}</span>}
                   {p.status&&<span style={{fontSize:10.5,background:p.status==='manual'?'var(--green-dim)':'var(--blue-dim)',color:p.status==='manual'?'var(--green)':'var(--blue)',padding:'2px 8px',borderRadius:20}}>{p.status}</span>}
+                  {p.used&&<span style={{fontSize:10.5,background:'var(--green-dim)',color:'var(--green)',padding:'2px 8px',borderRadius:20,fontWeight:600}}>✓ Used</span>}
                 </div>
                 <div style={{fontSize:11,color:'var(--text3)'}}>{p.savedAt?new Date(p.savedAt).toLocaleDateString():''}</div>
               </div>
               <div style={{fontSize:12.5,color:'var(--text)',lineHeight:1.7,marginBottom:10,whiteSpace:'pre-wrap',maxHeight:120,overflow:'hidden'}}>{p.content}</div>
               <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                <button className={`btn btn-sm ${p.used?'btn-p':'btn-ghost'}`} onClick={()=>toggleUsed(p.id)}>{p.used?'✓ Used':'Mark as used'}</button>
                 <button className="btn btn-ghost btn-sm" onClick={()=>{ navigator.clipboard.writeText(p.content); showToast('Copied!'); }}>Copy</button>
                 {onSaveToLog&&<button className="btn btn-ghost btn-sm" onClick={()=>onSaveToLog({content:p.content,bucket:p.bucket,formatName:p.formatName,style:p.style,studioId:p.id})}>Send to Log</button>}
                 <button className="btn btn-danger btn-sm" onClick={()=>deletePost(p.id)}>Delete</button>
@@ -3500,7 +3575,7 @@ Rules: No em dashes. No hashtags. No "I am excited to share". First person. Matc
       {tab==='calendar' && (
         <div>
           <CalendarView savedPosts={savedPosts} calendar={calendar} buckets={buckets}
-            onAssign={assignToSlot} onRemove={removeFromSlot}
+            onAssign={assignToSlot} onRemove={removeFromSlot} onToggleUsed={toggleUsed}
             DAYS={DAYS} SLOTS={SLOTS}/>
         </div>
       )}
