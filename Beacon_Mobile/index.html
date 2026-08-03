@@ -177,6 +177,9 @@ textarea.inp{resize:vertical;line-height:1.6}
 .funnel-lbl{font-size:11px;font-weight:500;color:var(--text3);width:90px;flex-shrink:0;display:flex;align-items:center}
 .funnel-bar{flex:1;border-radius:8px;padding:10px 13px}
 .fb-name{font-size:12px;font-weight:600;margin-bottom:3px}
+.fb-name-input{font-size:12px;font-weight:600;margin-bottom:3px;background:transparent;border:none;border-bottom:1px dashed transparent;color:inherit;font-family:var(--font-body);padding:0 0 2px;width:100%;outline:none;transition:border-color .15s}
+.fb-name-input:hover{border-bottom-color:currentColor}
+.fb-name-input:focus{border-bottom-color:currentColor}
 .fb-ex{font-size:11px;opacity:.8;line-height:1.5}
 .f-aw{background:rgba(61,126,255,.1);color:#7AA8FF}
 .f-ed{background:rgba(0,200,150,.1);color:#00C896}
@@ -567,6 +570,7 @@ const initStrategy = () => ({
   funnelConsideration:'The post positions and differentiates. It surfaces what you believe, how you think about problems, and why your approach is different from the generic data analyst answer. This is for people who are deciding whether to trust you enough to work with you. It might challenge a common belief in the data or business space, share a strong opinion on how founders should think about their numbers, or explain the philosophy behind how you work. The reader should finish thinking they have not heard someone put it that way before. This post is not for everyone — it is for the right people.',
   funnelConversion:'The post is for people who are warm and already considering reaching out. It shows proof of transformation — the before and after of a real engagement, without naming the client. A founder who could not answer a basic question about their own operations and now can. Language is specific and outcome-focused. No generic claims. The feeling the post creates should be: I have this problem right now and this person has solved it before. One well-told transformation is worth more than five testimonials. This post makes a warm reader pick up their phone.',
   postingNote:'Two posts per day. Morning: awareness or education. Afternoon: education, consideration, or conversion. Ratio adjusts per phase.',
+  funnelLabels:{awareness:'Awareness',education:'Education',consideration:'Consideration',conversion:'Conversion'},
 });
 
 const initTiers = () => ([
@@ -792,7 +796,10 @@ function BrandStrategy({strategy,setStrategy,ipTerms,setIpTerms,toast}) {
   const [newDef,setNewDef] = useState('');
   const [dirty,setDirty] = useState(false);
 
+  const DEFAULT_FUNNEL_LABELS = {awareness:'Awareness',education:'Education',consideration:'Consideration',conversion:'Conversion'};
+
   const upd = (key,val) => { setDraft(s=>({...s,[key]:val})); setDirty(true); };
+  const updLabel = (id,val) => upd('funnelLabels', {...(draft.funnelLabels||DEFAULT_FUNNEL_LABELS), [id]:val});
   const save = () => { setStrategy(draft); setDirty(false); toast('Brand strategy saved'); };
 
   const addTerm = () => {
@@ -852,20 +859,21 @@ function BrandStrategy({strategy,setStrategy,ipTerms,setIpTerms,toast}) {
       {tab==='funnel' && (
         <div>
           <div className="sec-hd">Attention to Trust to Customer</div>
+          <div style={{fontSize:11.5,color:'var(--text3)',marginBottom:12,marginTop:-4}}>These definitions drive what the AI generates for each funnel stage in Ideation and Post Studio — edit them and your changes carry through everywhere that stage is used.</div>
           {[
-            {cls:'f-aw',lbl:'Awareness',key:'funnelAwareness'},
-            {cls:'f-ed',lbl:'Education',key:'funnelEducation'},
-            {cls:'f-co',lbl:'Consideration',key:'funnelConsideration'},
-            {cls:'f-cv',lbl:'Conversion',key:'funnelConversion'},
-          ].map(r=>(
-            <div className="funnel-row" key={r.lbl}>
-              <div className="funnel-lbl">{r.lbl}</div>
-              <div className={`funnel-bar ${r.cls}`} style={{display:'flex',flexDirection:'column',gap:4}}>
-                <div className="fb-name">{r.lbl}</div>
-                <textarea className="inp" rows="2" value={draft[r.key]} onChange={e=>upd(r.key,e.target.value)} style={{background:'transparent',border:'1px solid rgba(255,255,255,0.1)',color:'inherit',fontSize:11,padding:'5px 8px'}}/>
+            {cls:'f-aw',id:'awareness',key:'funnelAwareness'},
+            {cls:'f-ed',id:'education',key:'funnelEducation'},
+            {cls:'f-co',id:'consideration',key:'funnelConsideration'},
+            {cls:'f-cv',id:'conversion',key:'funnelConversion'},
+          ].map(r=>{
+            const label = (draft.funnelLabels&&draft.funnelLabels[r.id]) || DEFAULT_FUNNEL_LABELS[r.id];
+            return (
+              <div className={`funnel-bar ${r.cls}`} key={r.id} style={{display:'flex',flexDirection:'column',gap:4,marginBottom:10}}>
+                <input className="fb-name-input" value={label} onChange={e=>updLabel(r.id,e.target.value)} placeholder={DEFAULT_FUNNEL_LABELS[r.id]}/>
+                <textarea className="inp" rows="6" value={draft[r.key]} onChange={e=>upd(r.key,e.target.value)} style={{background:'rgba(0,0,0,0.18)',border:'1px solid var(--border2)',color:'inherit',fontSize:12,lineHeight:1.6,padding:'8px 10px'}}/>
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div className="card" style={{marginTop:10}}>
             <div className="card-hd"><div className="card-title">Posting cadence note</div></div>
             <div className="card-bd"><textarea className="inp" rows="2" value={draft.postingNote} onChange={e=>upd('postingNote',e.target.value)}/></div>
@@ -2307,13 +2315,14 @@ function ProfileRoom({ profile, onChange, showToast }) {
 }
 
 /* ── FORMAT LIBRARY CARD ── */
-function FormatLibCard({f, sel, expanded, buckets, onToggle, onExpand, onSave, onDelete}) {
+function FormatLibCard({f, sel, expanded, buckets, strategy, onToggle, onExpand, onSave, onDelete}) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({...f});
   const upd = (k,v) => setDraft(d=>({...d,[k]:v}));
 
   const FUNNEL_COLORS = {awareness:'#3D7EFF',education:'#00C896',consideration:'#8B5CF6',conversion:'#EF4444'};
-  const FUNNEL_LABELS = {awareness:'Awareness',education:'Education',consideration:'Consideration',conversion:'Conversion'};
+  const DEFAULT_FUNNEL_LABELS = {awareness:'Awareness',education:'Education',consideration:'Consideration',conversion:'Conversion'};
+  const FUNNEL_LABELS = {...DEFAULT_FUNNEL_LABELS, ...(strategy?.funnelLabels||{})};
   const ALL_STAGES = ['awareness','education','consideration','conversion'];
 
   const toggleFunnelStage = (stage) => {
@@ -2430,7 +2439,7 @@ function FormatLibCard({f, sel, expanded, buckets, onToggle, onExpand, onSave, o
 }
 
 /* ── RESEARCH ROOM ── */
-function ResearchRoom({ research, onChange, showToast, apiKey, backupKeys=[], model, profileBuckets=[] }) {
+function ResearchRoom({ research, onChange, showToast, apiKey, backupKeys=[], model, profileBuckets=[], strategy }) {
   const buckets = profileBuckets.length ? profileBuckets : DEFAULT_BUCKETS;
   const [mode, setMode] = useState('active');
   const [tab, setTab] = useState('creators');
@@ -2724,7 +2733,7 @@ Return ONLY a valid JSON array where each object has: id (exact string from abov
               {/* Funnel filter pills */}
               {['','awareness','education','consideration','conversion'].map(stage=>{
                 const COLORS = {awareness:'#3D7EFF',education:'#00C896',consideration:'#8B5CF6',conversion:'#EF4444'};
-                const labels = {awareness:'Awareness',education:'Education',consideration:'Consideration',conversion:'Conversion'};
+                const labels = {awareness:'Awareness',education:'Education',consideration:'Consideration',conversion:'Conversion', ...(strategy?.funnelLabels||{})};
                 const isActive = funnelFilter===stage;
                 return (
                   <button key={stage} onClick={()=>setFunnelFilter(stage)}
@@ -2749,7 +2758,7 @@ Return ONLY a valid JSON array where each object has: id (exact string from abov
             {formatsLib
               .filter(f=>!funnelFilter||(f.funnelStages||[]).includes(funnelFilter))
               .map(f=>(
-              <FormatLibCard key={f.id} f={f} sel={selFormats.includes(f.id)} expanded={expandedFormat===f.id} buckets={buckets}
+              <FormatLibCard key={f.id} f={f} sel={selFormats.includes(f.id)} expanded={expandedFormat===f.id} buckets={buckets} strategy={strategy}
                 onToggle={()=>toggleFormat(f.id)}
                 onExpand={()=>setExpandedFormat(expandedFormat===f.id?null:f.id)}
                 onSave={updated=>{const u=formatsLib.map(x=>x.id===f.id?updated:x);syncFormats(u);showToast('Format saved');}}
@@ -2770,11 +2779,12 @@ function IdeationRoom({ ideation, profile, research, strategy, ipTerms, proofEnt
   const availableFormats = lib.filter(f=>selFormatIds.includes(f.id));
   const hypotheses = (research.hypotheses||[]).filter(h=>h.validated);
 
+  const DEFAULT_FUNNEL_LABELS = {awareness:'Awareness',education:'Education',consideration:'Consideration',conversion:'Conversion'};
   const FUNNEL_STAGES = [
-    { id:'awareness',     label:'Awareness',     color:'#3D7EFF' },
-    { id:'education',     label:'Education',     color:'#00C896' },
-    { id:'consideration', label:'Consideration', color:'#8B5CF6' },
-    { id:'conversion',    label:'Conversion',    color:'#EF4444' },
+    { id:'awareness',     label:(strategy?.funnelLabels?.awareness)     || DEFAULT_FUNNEL_LABELS.awareness,     color:'#3D7EFF' },
+    { id:'education',     label:(strategy?.funnelLabels?.education)     || DEFAULT_FUNNEL_LABELS.education,     color:'#00C896' },
+    { id:'consideration', label:(strategy?.funnelLabels?.consideration) || DEFAULT_FUNNEL_LABELS.consideration, color:'#8B5CF6' },
+    { id:'conversion',    label:(strategy?.funnelLabels?.conversion)    || DEFAULT_FUNNEL_LABELS.conversion,    color:'#EF4444' },
   ];
 
   const [entryMode, setEntryMode] = useState('generate');
@@ -2824,7 +2834,7 @@ Personal traits: ${profile.personalTraits||''}`;
       return `You are a LinkedIn content strategist with access to Google Search. Your task is to find pre-validated content ideas for a data analyst targeting small business owners and founders.
 
 WHAT AWARENESS CONTENT MEANS HERE:
-These are posts built around concepts, problems, and ideas that founders and operators ALREADY engage with and talk about — not posts about the creator's specific work or methodology. Like James Clear writing about habits (a pre-existing, proven concept), the creator writes about proven topics from their own perspective and positioning. The ideas must be relevant to founders and operators but do not need to be about data or analytics specifically.
+${strategy?.funnelAwareness || 'These are posts built around concepts, problems, and ideas that founders and operators ALREADY engage with and talk about — not posts about the creator\'s specific work or methodology. Like James Clear writing about habits (a pre-existing, proven concept), the creator writes about proven topics from their own perspective and positioning. The ideas must be relevant to founders and operators but do not need to be about data or analytics specifically.'}
 
 ${profileCtx}
 
@@ -2839,7 +2849,7 @@ ${steerCtx}${fmtCtx}${hypsCtx}${outputInstr}`;
       return `You are a LinkedIn content strategist helping a data analyst generate educational post ideas.
 
 WHAT EDUCATION CONTENT MEANS HERE:
-Teaching the target audience something specific and useful about running a business, understanding their operations, or making better decisions. NOT teaching data analytics as a skill. Teaching a founder something that changes how they think about THEIR business. The reader should finish the post knowing something they can use.
+${strategy?.funnelEducation || 'Teaching the target audience something specific and useful about running a business, understanding their operations, or making better decisions. NOT teaching data analytics as a skill. Teaching a founder something that changes how they think about THEIR business. The reader should finish the post knowing something they can use.'}
 
 ${profileCtx}${ipCtx}
 
@@ -2852,7 +2862,7 @@ ${steerCtx}${fmtCtx}${hypsCtx}${outputInstr}`;
       return `You are a LinkedIn content strategist helping a data analyst generate consideration-stage post ideas.
 
 WHAT CONSIDERATION CONTENT MEANS HERE:
-Posts that show HOW this person thinks, what they believe, what makes their approach different. This is trust-building content. Contrarian takes, strong opinions, named frameworks, the philosophy behind how they work. The reader should finish thinking "I have not heard anyone put it that way before."
+${strategy?.funnelConsideration || 'Posts that show HOW this person thinks, what they believe, what makes their approach different. This is trust-building content. Contrarian takes, strong opinions, named frameworks, the philosophy behind how they work. The reader should finish thinking "I have not heard anyone put it that way before."'}
 
 ${profileCtx}${ipCtx}
 
@@ -2869,7 +2879,7 @@ ${steerCtx}${fmtCtx}${hypsCtx}${outputInstr}`;
       return `You are a LinkedIn content strategist helping a data analyst generate conversion-stage post ideas.
 
 WHAT CONVERSION CONTENT MEANS HERE:
-Posts that show proof of transformation. Before and after. A founder who had a problem, worked with this creator, and now sees their business differently. No client names. Specific enough that a warm reader thinks "this is exactly my situation." The goal is to make the right person reach out.
+${strategy?.funnelConversion || 'Posts that show proof of transformation. Before and after. A founder who had a problem, worked with this creator, and now sees their business differently. No client names. Specific enough that a warm reader thinks "this is exactly my situation." The goal is to make the right person reach out.'}
 
 ${profileCtx}${ipCtx}${proofCtx}
 
@@ -3271,10 +3281,10 @@ function PostStudioRoom({ studio, profile, research, strategy, onChange, onSaveT
   const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   const SLOTS = ['Morning','Afternoon','Evening'];
   const FUNNEL_STAGES = [
-    { id:'awareness',     label:'Awareness',     desc: strategy?.funnelAwareness     || 'Broad and relatable. Speaks to anyone in business. No assumed knowledge. Hook them on a universal problem or observation.' },
-    { id:'education',     label:'Education',     desc: strategy?.funnelEducation     || 'Teach one specific useful thing. A framework, concept, or process the reader can actually use. Concrete and practical.' },
-    { id:'consideration', label:'Consideration', desc: strategy?.funnelConsideration || 'POV content. What you stand for, what makes your approach different. Challenge a common belief or surface your philosophy.' },
-    { id:'conversion',    label:'Conversion',    desc: strategy?.funnelConversion    || 'Transformation and proof. Before and after. Specific outcomes. A warm reader should feel this was written for them.' },
+    { id:'awareness',     label:(strategy?.funnelLabels?.awareness)||'Awareness',         desc: strategy?.funnelAwareness     || 'Broad and relatable. Speaks to anyone in business. No assumed knowledge. Hook them on a universal problem or observation.' },
+    { id:'education',     label:(strategy?.funnelLabels?.education)||'Education',         desc: strategy?.funnelEducation     || 'Teach one specific useful thing. A framework, concept, or process the reader can actually use. Concrete and practical.' },
+    { id:'consideration', label:(strategy?.funnelLabels?.consideration)||'Consideration', desc: strategy?.funnelConsideration || 'POV content. What you stand for, what makes your approach different. Challenge a common belief or surface your philosophy.' },
+    { id:'conversion',    label:(strategy?.funnelLabels?.conversion)||'Conversion',       desc: strategy?.funnelConversion    || 'Transformation and proof. Before and after. Specific outcomes. A warm reader should feel this was written for them.' },
   ];
 
   useEffect(() => {
@@ -4032,7 +4042,7 @@ function AppShell({onHome}) {
         {active==='proof'     && <SocialProof tiers={proofTiers} setTiers={setProofTiers} entries={proofEntries} setEntries={setProofEntries} geminiKey={geminiKey} geminiBackupKeys={geminiBackupKeys} geminiModel={geminiModel} toast={pushToast}/>}
         {active==='dropin'    && <DropinRoom dropin={dropin} setDropin={setDropin} profile={lciProfile} geminiKey={geminiKey} geminiBackupKeys={geminiBackupKeys} toast={pushToast}/>}
         {active==='profile'   && <ProfileRoom profile={lciProfile} onChange={p=>{setLciProfile(p); setProfile(p);}} showToast={(m)=>pushToast(m)}/>}
-        {active==='research'  && <ResearchRoom research={lciResearch} onChange={r=>setLciResearch(r)} showToast={(m)=>pushToast(m)} apiKey={geminiKey} backupKeys={lciBackupKeys} model={lciModel} profileBuckets={lciProfile.buckets||[]}/>}
+        {active==='research'  && <ResearchRoom research={lciResearch} onChange={r=>setLciResearch(r)} showToast={(m)=>pushToast(m)} apiKey={geminiKey} backupKeys={lciBackupKeys} model={lciModel} profileBuckets={lciProfile.buckets||[]} strategy={strategy}/>}
         {active==='ideation'  && <IdeationRoom ideation={lciIdeation} profile={lciProfile} research={lciResearch} strategy={strategy} ipTerms={ipTerms} proofEntries={proofEntries} onChange={i=>setLciIdeation(i)} onSendToStudio={handleSendToStudio} showToast={(m)=>pushToast(m)} apiKey={geminiKey} backupKeys={geminiBackupKeys} model={geminiModel}/>}
         {active==='studio'    && <PostStudioRoom studio={lciStudio} profile={lciProfile} research={lciResearch} strategy={strategy} onChange={s=>setLciStudio(s)} onSaveToLog={handleSaveToLog} showToast={(m)=>pushToast(m)} apiKey={geminiKey} backupKeys={geminiBackupKeys} model={geminiModel}/>}
         {active==='log'       && <PerformanceLogRoom log={lciLog} studio={lciStudio} research={lciResearch} onChange={l=>setLciLog(l)} showToast={(m)=>pushToast(m)}/>}
