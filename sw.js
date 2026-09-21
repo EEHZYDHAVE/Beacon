@@ -1,4 +1,8 @@
-const VERSION = 9;
+/* Beacon service worker
+   v10 — network-first for the app shell so updates land without reinstalling,
+   and the new worker WAITS so the app can prompt you to reload. */
+
+const VERSION = 10;
 const CACHE = `site-cache-v${VERSION}`;
 const ASSETS = [
   './index.html',
@@ -9,29 +13,59 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())
-  );
+  // NOTE: deliberately no skipWaiting() here. The new worker stays in the
+  // "waiting" state so the page can show an update prompt, then tell it to
+  // take over via the SKIP_WAITING message below.
+  e.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));
 });
 
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => { self.skipWaiting(); return self.clients.claim(); })
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
 
+// The page asks the waiting worker to activate immediately.
+self.addEventListener('message', e => {
+  if (e.data === 'SKIP_WAITING' || (e.data && e.data.type === 'SKIP_WAITING')) {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+
+  const isDocument =
+    e.request.mode === 'navigate' ||
+    e.request.destination === 'document' ||
+    e.request.destination === 'script';
+
+  if (isDocument) {
+    // Network-first: always try for the latest build, fall back to cache offline.
+    e.respondWith(
+      fetch(e.request)
+        .then(resp => {
+          if (resp && resp.status === 200) {
+            const clone = resp.clone();
+            caches.open(CACHE).then(cache => cache.put(e.request, clone));
+          }
+          return resp;
+        })
+        .catch(() => caches.match(e.request).then(c => c || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // Cache-first for static assets (icons, fonts) — these rarely change.
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
-      if (e.request.method === 'GET' && resp && resp.status === 200) {
+      if (resp && resp.status === 200) {
         const clone = resp.clone();
         caches.open(CACHE).then(cache => cache.put(e.request, clone));
       }
       return resp;
-    }).catch(() => {
-      if (e.request.destination === 'document') return caches.match('./');
-    }))
+    }).catch(() => undefined))
   );
 });

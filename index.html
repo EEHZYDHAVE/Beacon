@@ -22,14 +22,84 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-<!-- Service worker registration
-     Replace /REPO_NAME/ with your GitHub Pages repo path, for example /focusflow/ -->
+<!-- Service worker registration with update detection.
+     Exposes window.Beacon.checkForUpdate() and window.Beacon.applyUpdate()
+     so the app's refresh button can drive it. Fires a 'beacon-update-ready'
+     event on window when a new build is waiting. -->
 <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/Beacon/sw.js', { scope: '/Beacon/' })
-      .then(() => console.log('Service worker registered'))
-      .catch(err => console.error('SW registration failed:', err));
+(function () {
+  var SW_URL = './sw.js';      // relative — works from any repo subfolder
+  var SW_SCOPE = './';
+  var reg = null;
+  var reloading = false;
+
+  window.Beacon = window.Beacon || {};
+  window.Beacon.updateReady = false;
+
+  function announceReady() {
+    if (window.Beacon.updateReady) return;
+    window.Beacon.updateReady = true;
+    window.dispatchEvent(new CustomEvent('beacon-update-ready'));
   }
+
+  function watchWorker(worker) {
+    if (!worker) return;
+    worker.addEventListener('statechange', function () {
+      // "installed" + an existing controller means a NEW version is waiting.
+      if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+        announceReady();
+      }
+    });
+  }
+
+  // Tell the waiting worker to take over, then reload once it does.
+  window.Beacon.applyUpdate = function () {
+    if (reg && reg.waiting) {
+      reg.waiting.postMessage('SKIP_WAITING');
+    } else {
+      hardReload();
+    }
+  };
+
+  // Manual check: ask the browser to re-fetch sw.js right now.
+  // Resolves true if an update is waiting, false if already current.
+  window.Beacon.checkForUpdate = function () {
+    if (!reg) return Promise.resolve(false);
+    return reg.update()
+      .then(function () {
+        return !!(reg.waiting || window.Beacon.updateReady);
+      })
+      .catch(function () { return false; });
+  };
+
+  function hardReload() {
+    if (reloading) return;
+    reloading = true;
+    window.location.reload();
+  }
+  window.Beacon.hardReload = hardReload;
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register(SW_URL, { scope: SW_SCOPE })
+      .then(function (r) {
+        reg = r;
+        if (r.waiting && navigator.serviceWorker.controller) announceReady();
+        watchWorker(r.installing);
+        r.addEventListener('updatefound', function () { watchWorker(r.installing); });
+
+        // Check on load, whenever the app regains focus, and hourly.
+        r.update().catch(function () {});
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState === 'visible') r.update().catch(function () {});
+        });
+        setInterval(function () { r.update().catch(function () {}); }, 60 * 60 * 1000);
+      })
+      .catch(function (err) { console.error('SW registration failed:', err); });
+
+    // The new worker activated — reload so the page runs the new build.
+    navigator.serviceWorker.addEventListener('controllerchange', hardReload);
+  }
+})();
 </script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -444,6 +514,11 @@ textarea.inp{resize:vertical;line-height:1.6}
 .cal-sheet-search{padding:0 16px 12px}
 .cal-sheet-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:5px}
 .cal-sheet-date{font-size:10.5px;color:var(--text3);margin-top:5px}
+.upd-banner{position:fixed;left:50%;transform:translateX(-50%);z-index:200;display:flex;align-items:center;gap:12px;
+  background:var(--bg2);border:1px solid var(--green);border-radius:12px;padding:11px 14px;
+  box-shadow:0 8px 28px rgba(0,0,0,.4);max-width:min(440px,92vw)}
+.upd-banner-txt{font-size:12.5px;color:var(--text);line-height:1.45;flex:1}
+.upd-banner-txt b{display:block;font-weight:700;margin-bottom:2px}
 </style>
 </head>
 <body>
@@ -2931,20 +3006,34 @@ ${steerCtx}${fmtCtx}${outputInstr}`;
     setLoading(false);
   };
 
-  const handleCustomSend = () => {
-    if(!customIdea.trim()){ showToast('Add your idea first','!'); return; }
+  const buildCustomIdea = () => {
     const fmt = availableFormats.find(f=>f.id===customFormat);
     const funnel = FUNNEL_STAGES.find(f=>f.id===customFunnel);
-    const idea = {
+    return {
       id:Date.now(), hook:customIdea.trim(), angle:'Custom idea',
       viralScore:null, scoreReason:'Your own idea',
       funnelStage:customFunnel, funnelLabel:funnel?.label||'',
       formatId:customFormat||'', formatName:fmt?.name||'Open format',
       createdAt:new Date().toISOString(), custom:true
     };
+  };
+
+  const handleCustomSend = () => {
+    if(!customIdea.trim()){ showToast('Add your idea first','!'); return; }
+    const idea = buildCustomIdea();
     setCustomIdea(''); setCustomFunnel(''); setCustomFormat('');
     onSendToStudio(idea);
     showToast('Idea sent to Post Studio');
+  };
+
+  const handleCustomSave = () => {
+    if(!customIdea.trim()){ showToast('Add your idea first','!'); return; }
+    const idea = {...buildCustomIdea(), savedOnly:true};
+    const nh = [idea,...history].slice(0,50);
+    setHistory(nh);
+    onChange({ideas, history:nh, pendingIdea:ideation.pendingIdea});
+    setCustomIdea(''); setCustomFunnel(''); setCustomFormat('');
+    showToast('Idea saved to Idea Box');
   };
 
   const FunnelBadge = ({stage}) => {
@@ -2965,7 +3054,7 @@ ${steerCtx}${fmtCtx}${outputInstr}`;
       <div className="entry-tabs">
         <button className={`entry-tab ${entryMode==='generate'?'active':''}`} onClick={()=>setEntryMode('generate')}>Generate Ideas</button>
         <button className={`entry-tab ${entryMode==='custom'?'active':''}`} onClick={()=>setEntryMode('custom')}>My Own Idea</button>
-        <button className={`entry-tab ${entryMode==='history'?'active':''}`} onClick={()=>setEntryMode('history')}>Idea History {history.length>0&&`(${history.length})`}</button>
+        <button className={`entry-tab ${entryMode==='history'?'active':''}`} onClick={()=>setEntryMode('history')}>Idea Box {history.length>0&&`(${history.length})`}</button>
       </div>
 
       {entryMode==='generate' && (
@@ -3040,6 +3129,7 @@ ${steerCtx}${fmtCtx}${outputInstr}`;
                     </div>
                     <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0}}>
                       <button className="btn btn-primary btn-sm" onClick={()=>{onSendToStudio(idea);const ni=ideas.filter(i=>i.id!==idea.id);const nh=[idea,...history].slice(0,50);sync(ni,nh);showToast('Idea sent to Post Studio');}}>Take to Studio</button>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>{const ni=ideas.filter(i=>i.id!==idea.id);const nh=[{...idea,savedOnly:true},...history].slice(0,50);sync(ni,nh);showToast('Idea saved to Idea Box');}}>Save to Idea Box</button>
                       <button className="btn btn-danger btn-sm" onClick={()=>sync(ideas.filter(i=>i.id!==idea.id),history)}>Discard</button>
                     </div>
                   </div>
@@ -3053,7 +3143,7 @@ ${steerCtx}${fmtCtx}${outputInstr}`;
       {entryMode==='custom' && (
         <div>
           <div className="card">
-            <div className="card-header"><div><div className="card-title">My Own Idea</div><div className="card-sub">Take any rough idea directly to the Post Studio</div></div></div>
+            <div className="card-header"><div><div className="card-title">My Own Idea</div><div className="card-sub">Take a rough idea straight to the Post Studio, or park it in the Idea Box for later</div></div></div>
             <div className="card-body">
               <div className="field"><label className="label">Your idea</label><textarea className="input" rows={4} value={customIdea} onChange={e=>setCustomIdea(e.target.value)} placeholder="Describe the post you want to write. Can be rough — a single sentence, a topic, a specific angle, or a conversation you want to share..."/></div>
               <div className="grid-2">
@@ -3072,7 +3162,8 @@ ${steerCtx}${fmtCtx}${outputInstr}`;
                   </select>
                 </div>
               </div>
-              <div style={{display:'flex',justifyContent:'flex-end',marginTop:14}}>
+              <div style={{display:'flex',justifyContent:'flex-end',gap:8,marginTop:14,flexWrap:'wrap'}}>
+                <button className="btn btn-ghost" onClick={handleCustomSave} disabled={!customIdea.trim()} style={{minWidth:140,justifyContent:'center',opacity:!customIdea.trim()?0.5:1}}>Save to Idea Box</button>
                 <button className="btn btn-primary" onClick={handleCustomSend} disabled={!customIdea.trim()} style={{minWidth:140,justifyContent:'center',opacity:!customIdea.trim()?0.5:1}}>Take to Studio</button>
               </div>
             </div>
@@ -3082,9 +3173,9 @@ ${steerCtx}${fmtCtx}${outputInstr}`;
 
       {entryMode==='history' && (
         <div>
-          <div style={{fontSize:12.5,color:'var(--text3)',marginBottom:16,lineHeight:1.6}}>Ideas that have been taken to studio. Up to 50 are kept here.</div>
+          <div style={{fontSize:12.5,color:'var(--text3)',marginBottom:16,lineHeight:1.6}}>Your idea box. Ideas you've parked for later plus ones already taken to the studio. Up to 50 are kept here.</div>
           {history.length===0
-            ? <div style={{textAlign:'center',padding:'48px',color:'var(--text3)',fontSize:12.5,background:'var(--surface)',borderRadius:12,border:'1px solid var(--border)'}}>No history yet. Ideas move here when you take them to the studio.</div>
+            ? <div style={{textAlign:'center',padding:'48px',color:'var(--text3)',fontSize:12.5,background:'var(--surface)',borderRadius:12,border:'1px solid var(--border)'}}>Nothing here yet. Save an idea to the box, or take one to the studio.</div>
             : history.map(idea=>(
               <div key={idea.id} className="idea-card" style={{opacity:.85}}>
                 <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12}}>
@@ -3095,11 +3186,14 @@ ${steerCtx}${fmtCtx}${outputInstr}`;
                       {idea.formatName&&idea.formatName!=='Open format'&&<span style={{fontSize:11,background:'var(--bg3)',color:'var(--text3)',padding:'2px 8px',borderRadius:20,border:'1px solid var(--border)'}}>{idea.formatName}</span>}
                       {idea.viralScore&&<Stars score={idea.viralScore}/>}
                       {idea.custom&&<span style={{fontSize:11,color:'var(--green)',background:'var(--green-dim)',padding:'2px 8px',borderRadius:20}}>Custom</span>}
+                      {idea.savedOnly
+                        ? <span style={{fontSize:11,color:'var(--amber)',background:'rgba(245,158,11,.12)',padding:'2px 8px',borderRadius:20}}>Unused</span>
+                        : <span style={{fontSize:11,color:'var(--text3)',background:'var(--bg3)',padding:'2px 8px',borderRadius:20,border:'1px solid var(--border)'}}>Went to Studio</span>}
                     </div>
                     {idea.createdAt&&<div style={{fontSize:11,color:'var(--text3)'}}>{new Date(idea.createdAt).toLocaleDateString()}</div>}
                   </div>
                   <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0}}>
-                    <button className="btn btn-primary btn-sm" onClick={()=>{const nh=history.filter(h=>h.id!==idea.id);setHistory(nh);onChange({ideas,history:nh,pendingIdea:ideation.pendingIdea});onSendToStudio(idea);showToast('Idea sent to Post Studio');}}>Take to Studio</button>
+                    <button className="btn btn-primary btn-sm" onClick={()=>{const nh=history.map(h=>h.id===idea.id?{...h,savedOnly:false}:h);setHistory(nh);onChange({ideas,history:nh,pendingIdea:ideation.pendingIdea});onSendToStudio(idea);showToast('Idea sent to Post Studio');}}>Take to Studio</button>
                     <button className="btn btn-danger btn-sm" onClick={()=>{const nh=history.filter(h=>h.id!==idea.id);setHistory(nh);onChange({ideas,history:nh,pendingIdea:ideation.pendingIdea});}}>Remove</button>
                   </div>
                 </div>
@@ -3701,6 +3795,31 @@ function PlaceholderRoom({room}) {
 /* ── APP SHELL ── */
 function AppShell({onHome}) {
   const [active,setActive] = useState('dashboard');
+
+  /* ── app update detection (service worker) ── */
+  const [updateReady,setUpdateReady] = useState(()=> !!(window.Beacon && window.Beacon.updateReady));
+  const [checkingUpdate,setCheckingUpdate] = useState(false);
+  useEffect(()=>{
+    const onReady = () => setUpdateReady(true);
+    window.addEventListener('beacon-update-ready', onReady);
+    return () => window.removeEventListener('beacon-update-ready', onReady);
+  },[]);
+  const applyUpdate = () => {
+    if (window.Beacon && window.Beacon.applyUpdate) window.Beacon.applyUpdate();
+    else window.location.reload();
+  };
+  const checkUpdate = async () => {
+    if (checkingUpdate) return;
+    setCheckingUpdate(true);
+    try {
+      const found = window.Beacon && window.Beacon.checkForUpdate
+        ? await window.Beacon.checkForUpdate()
+        : false;
+      if (found) { setUpdateReady(true); pushToast('Update available — tap Reload to apply'); }
+      else pushToast('You are on the latest version');
+    } catch { pushToast('Could not check for updates','err'); }
+    setCheckingUpdate(false);
+  };
   const [toasts,pushToast] = useToast();
 
   /* ── localStorage helpers ── */
@@ -4009,6 +4128,11 @@ function AppShell({onHome}) {
         <div className="topbar">
           <div><div className="tb-title">{activeRoom?.label}</div><div className="tb-sub">{activeRoom?.desc}</div></div>
           <div className="tb-right">
+            <button className="icon-btn" onClick={checkUpdate} disabled={checkingUpdate}
+              title={updateReady?'Update ready — click to reload':'Check for updates'}
+              style={updateReady?{borderColor:'var(--green)',color:'var(--green)'}:{}}>
+              {checkingUpdate?'…':'⟳'}
+            </button>
             <button className="icon-btn" onClick={()=>{setDark(d=>{const next=!d;document.body.classList.toggle('light',!next);return next;})}}>{dark?'☀':'🌙'}</button>
             <button className="icon-btn" onClick={onHome} title="Home">⌂</button>
           </div>
@@ -4027,6 +4151,13 @@ function AppShell({onHome}) {
           {!['dashboard','strategy','proof','dropin','profile','research','ideation','studio','log','settings'].includes(active) && <PlaceholderRoom room={activeRoom||ROOMS[0]}/>}
         </div>
       </div>
+      {updateReady && (
+        <div className="upd-banner" style={{bottom:22}}>
+          <div className="upd-banner-txt"><b>New version available</b>Reload to pick up the latest build.</div>
+          <button className="btn btn-primary btn-sm" onClick={applyUpdate}>Reload</button>
+          <button className="icon-btn" onClick={()=>setUpdateReady(false)} title="Later">✕</button>
+        </div>
+      )}
       <Toasts items={toasts}/>
     </div>
   );
